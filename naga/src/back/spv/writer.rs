@@ -1613,12 +1613,24 @@ impl Writer {
     }
 
     pub(super) fn write_barrier(&mut self, flags: crate::Barrier, block: &mut Block) {
+        
+        if flags.contains(crate::Barrier::FRAGMENT_BEGIN) {
+            block.body.push(Instruction::new(spirv::Op::BeginInvocationInterlockEXT));
+            self.use_extension("SPV_EXT_fragment_shader_interlock");
+            return;
+        }
+        if flags.contains(crate::Barrier::FRAGMENT_END) {
+            block.body.push(Instruction::new(spirv::Op::EndInvocationInterlockEXT));
+            self.use_extension("SPV_EXT_fragment_shader_interlock");
+            return;
+        }
+
         let memory_scope = if flags.contains(crate::Barrier::STORAGE) {
             spirv::Scope::Device
         } else {
             spirv::Scope::Workgroup
         };
-        let mut semantics = spirv::MemorySemantics::ACQUIRE_RELEASE;
+        let mut semantics: spirv::MemorySemantics = spirv::MemorySemantics::ACQUIRE_RELEASE;
         semantics.set(
             spirv::MemorySemantics::UNIFORM_MEMORY,
             flags.contains(crate::Barrier::STORAGE),

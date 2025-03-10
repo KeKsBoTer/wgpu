@@ -1184,6 +1184,16 @@ bitflags_array! {
         ///
         /// This is a native only feature.
         const EXPERIMENTAL_MESH_SHADER_MULTIVIEW = 1 << 48;
+
+
+        /// Experimental feature fragment shader interlock
+        /// 
+        /// Supported platforms:
+        /// - Vulkan
+        /// 
+        /// This is a native only feature.
+        const EXPERIMENTAL_FRAGMENT_SHADER_INTERLOCK = 1 << 49;
+
     }
 
     /// Features that are not guaranteed to be supported.

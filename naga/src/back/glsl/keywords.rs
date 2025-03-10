@@ -481,10 +481,14 @@ pub const RESERVED_KEYWORDS: &[&str] = &[
     "anyInvocation",
     "allInvocations",
     "allInvocationsEqual",
+    // frament shader interlock
+    "fragmentBarrierBegin",
+    "fragmentBarrierEnd",        
     //
     // entry point name (should not be shadowed)
     //
     "main",
+
     // Naga utilities:
     super::MODF_FUNCTION,
     super::FREXP_FUNCTION,

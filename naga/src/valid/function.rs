@@ -982,14 +982,26 @@ impl super::Validator {
                     finished = true;
                 }
                 S::Barrier(barrier) => {
-                    stages &= super::ShaderStages::COMPUTE;
-                    if barrier.contains(crate::Barrier::SUB_GROUP) {
+                    if barrier.contains(crate::Barrier::FRAGMENT_BEGIN) || barrier.contains(crate::Barrier::FRAGMENT_END) {
                         if !self.capabilities.contains(
-                            super::Capabilities::SUBGROUP | super::Capabilities::SUBGROUP_BARRIER,
+                            super::Capabilities::FRAGMENT_BARRIER,
                         ) {
                             return Err(FunctionError::MissingCapability(
-                                super::Capabilities::SUBGROUP
-                                    | super::Capabilities::SUBGROUP_BARRIER,
+                                super::Capabilities::FRAGMENT_BARRIER,
+                            )
+                            .with_span_static(span, "missing capability for this operation"));
+                        }
+                        stages &= super::ShaderStages::FRAGMENT;
+                    }else{
+                        stages &= super::ShaderStages::COMPUTE;
+                    }
+
+                    if barrier.contains(crate::Barrier::SUB_GROUP) {
+                        if !self.capabilities.contains(
+                            super::Capabilities::FRAGMENT_BARRIER
+                        ) {
+                            return Err(FunctionError::MissingCapability(
+                                super::Capabilities::FRAGMENT_BARRIER
                             )
                             .with_span_static(span, "missing capability for this operation"));
                         }

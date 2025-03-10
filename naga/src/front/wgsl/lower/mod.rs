@@ -2629,6 +2629,22 @@ impl<'source, 'temp> Lowerer<'source, 'temp> {
                                 .push(crate::Statement::Barrier(crate::Barrier::TEXTURE), span);
                             return Ok(None);
                         }
+                        "fragmentBarrierBegin" => {
+                            ctx.prepare_args(arguments, 0, span).finish()?;
+
+                            let rctx = ctx.runtime_expression_ctx(span)?;
+                            rctx.block
+                                .push(crate::Statement::Barrier(crate::Barrier::FRAGMENT_BEGIN), span);
+                            return Ok(None);
+                        }
+                        "fragmentBarrierEnd" => {
+                            ctx.prepare_args(arguments, 0, span).finish()?;
+
+                            let rctx = ctx.runtime_expression_ctx(span)?;
+                            rctx.block
+                                .push(crate::Statement::Barrier(crate::Barrier::FRAGMENT_END), span);
+                            return Ok(None);
+                        }
                         "workgroupUniformLoad" => {
                             let mut args = ctx.prepare_args(arguments, 1, span);
                             let expr = args.next()?;

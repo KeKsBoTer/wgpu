@@ -1571,6 +1571,9 @@ impl dispatch::InstanceInterface for ContextWebGpu {
                     "pointer_composite_access" => {
                         Some(crate::WgslLanguageFeatures::PointerCompositeAccess)
                     }
+                    "fragment_shader_interlock" => {
+                        Some(crate::WgslLanguageFeatures::FragmentShaderInterlock)
+                    }
                     _ => None,
                 })
                 .for_each(|wlf| {

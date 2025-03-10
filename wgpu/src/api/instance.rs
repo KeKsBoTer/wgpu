@@ -20,6 +20,8 @@ bitflags::bitflags! {
         const UnrestrictedPointerParameters = 1 << 2;
         /// <https://www.w3.org/TR/WGSL/#language_extension-pointer_composite_access>
         const PointerCompositeAccess = 1 << 3;
+        /// <https://registry.khronos.org/vulkan/specs/latest/man/html/VK_EXT_fragment_shader_interlock.html>
+        const FragmentShaderInterlock = 1 << 4;
     }
 }
 

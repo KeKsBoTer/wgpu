@@ -55,6 +55,9 @@ bitflags::bitflags! {
         const SUBGROUP_OPERATIONS = 1 << 24;
         /// Image atomics
         const TEXTURE_ATOMICS = 1 << 25;
+
+        // fragment shader interlock
+        const FRAGMENT_BARRIER = 1 << 26;
     }
 }
 
@@ -135,6 +138,7 @@ impl FeaturesManager {
         check_feature!(TEXTURE_LEVELS, 130);
         check_feature!(IMAGE_SIZE, 430, 310);
         check_feature!(TEXTURE_SHADOW_LOD, 200, 300);
+        check_feature!(FRAGMENT_BARRIER, 420, 310);
 
         // Return an error if there are missing features
         if missing.is_empty() {
@@ -285,6 +289,11 @@ impl FeaturesManager {
         if self.0.contains(Features::TEXTURE_ATOMICS) {
             // https://www.khronos.org/registry/OpenGL/extensions/OES/OES_shader_image_atomic.txt
             writeln!(out, "#extension GL_OES_shader_image_atomic : require")?;
+        }
+
+        if self.0.contains(Features::FRAGMENT_BARRIER){
+            writeln!(out, "#extension GL_ARB_fragment_shader_interlock : require")?;
+            writeln!(out, "layout(pixel_interlock_ordered) in;")?;
         }
 
         Ok(())
@@ -566,6 +575,11 @@ impl<W> Writer<'_, W> {
                 match *stmt {
                     crate::Statement::ImageAtomic { .. } => {
                         features.request(Features::TEXTURE_ATOMICS)
+                    }
+                    crate::Statement::Barrier(b) => match  b {
+                        crate::Barrier::FRAGMENT_BEGIN => features.request(Features::FRAGMENT_BARRIER),
+                        crate::Barrier::FRAGMENT_END => features.request(Features::FRAGMENT_BARRIER),
+                        _ => {}
                     }
                     _ => {}
                 }

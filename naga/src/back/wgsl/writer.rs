@@ -988,6 +988,13 @@ impl<W: Write> Writer<W> {
                 if barrier.contains(crate::Barrier::TEXTURE) {
                     writeln!(self.out, "{level}textureBarrier();")?;
                 }
+                
+                if barrier.contains(crate::Barrier::FRAGMENT_BEGIN) {
+                    writeln!(self.out, "{level}fragmentBarrierBegin();")?;
+                }
+                if barrier.contains(crate::Barrier::FRAGMENT_BEGIN) {
+                    writeln!(self.out, "{level}fragmentBarrierEnd();")?;
+                }
             }
             Statement::RayQuery { .. } => unreachable!(),
             Statement::SubgroupBallot { result, predicate } => {

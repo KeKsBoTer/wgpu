@@ -4643,7 +4643,13 @@ impl<'a, W: Write> Writer<'a, W> {
         if flags.contains(crate::Barrier::TEXTURE) {
             writeln!(self.out, "{level}memoryBarrierImage();")?;
         }
-        writeln!(self.out, "{level}barrier();")?;
+        if flags.contains(crate::Barrier::FRAGMENT_BEGIN) {
+            writeln!(self.out, "{level}beginInvocationInterlockARB();")?;
+        }else if flags.contains(crate::Barrier::FRAGMENT_END) {
+            writeln!(self.out, "{level}endInvocationInterlockARB();")?;
+        }else{
+            writeln!(self.out, "{level}barrier();")?;
+        }
         Ok(())
     }
 

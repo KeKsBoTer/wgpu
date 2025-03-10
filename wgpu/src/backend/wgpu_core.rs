@@ -866,6 +866,9 @@ impl dispatch::InstanceInterface for ContextWgpuCore {
                     ImplementedLanguageExtension::PointerCompositeAccess => {
                         crate::WgslLanguageFeatures::PointerCompositeAccess
                     }
+                    ImplementedLanguageExtension::FragmentShaderInterlock => {
+                        crate::WgslLanguageFeatures::FragmentShaderInterlock
+                    }
                 }
             },
         )

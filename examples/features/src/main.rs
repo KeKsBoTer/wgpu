@@ -33,6 +33,12 @@ const EXAMPLES: &[ExampleDesc] = &[
         webgpu: true,
     },
     ExampleDesc {
+        name: "fragment_shader_interlock",
+        function: wgpu_examples::fragment_shader_interlock::main,
+        webgl: false,
+        webgpu: false,
+    },
+    ExampleDesc {
         name: "hello_synchronization",
         function: wgpu_examples::hello_synchronization::main,
         webgl: false, // No canvas for WebGL
@@ -245,6 +251,7 @@ fn print_unknown_example(result: Option<String>) {
 fn main() {
     #[cfg(target_arch = "wasm32")]
     print_examples();
+
 
     let Some(example) = get_example_name() else {
         print_unknown_example(None);

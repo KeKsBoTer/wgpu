@@ -1373,6 +1373,10 @@ bitflags::bitflags! {
         const SUB_GROUP = 1 << 2;
         /// Barrier synchronizes texture memory accesses in a workgroup.
         const TEXTURE = 1 << 3;
+        /// Fragment shader interlock barrier.
+        const FRAGMENT_BEGIN = 1 << 4;
+        /// Fragment shader interlock barrier.
+        const FRAGMENT_END = 1 << 5;
     }
 }
 

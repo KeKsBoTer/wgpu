@@ -163,6 +163,9 @@ bitflags::bitflags! {
         const TEXTURE_INT64_ATOMIC = 1 << 24;
         /// Support for ray queries returning vertex position
         const RAY_HIT_VERTEX_POSITION = 1 << 25;
+
+        /// fragment barrier
+        const FRAGMENT_BARRIER = 1 << 26;
     }
 }
 

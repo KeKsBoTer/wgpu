@@ -20,6 +20,7 @@ impl LanguageExtension {
     const PACKED4X8_INTEGER_DOT_PRODUCT: &'static str = "packed_4x8_integer_dot_product";
     const UNRESTRICTED_POINTER_PARAMETERS: &'static str = "unrestricted_pointer_parameters";
     const POINTER_COMPOSITE_ACCESS: &'static str = "pointer_composite_access";
+    const FRAGMENT_SHADER_INTERLOCK: &'static str = "fragment_shader_interlock";
 
     /// Convert from a sentinel word in WGSL into its associated [`LanguageExtension`], if possible.
     pub fn from_ident(s: &str) -> Option<Self> {
@@ -35,6 +36,9 @@ impl LanguageExtension {
             }
             Self::POINTER_COMPOSITE_ACCESS => {
                 Self::Implemented(ImplementedLanguageExtension::PointerCompositeAccess)
+            }
+            Self::FRAGMENT_SHADER_INTERLOCK => {
+                Self::Implemented(ImplementedLanguageExtension::FragmentShaderInterlock)
             }
             _ => return None,
         })
@@ -63,6 +67,7 @@ impl LanguageExtension {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, VariantArray)]
 pub enum ImplementedLanguageExtension {
     PointerCompositeAccess,
+    FragmentShaderInterlock
 }
 
 impl ImplementedLanguageExtension {
@@ -76,6 +81,9 @@ impl ImplementedLanguageExtension {
         match self {
             ImplementedLanguageExtension::PointerCompositeAccess => {
                 LanguageExtension::POINTER_COMPOSITE_ACCESS
+            }
+            ImplementedLanguageExtension::FragmentShaderInterlock => {
+                LanguageExtension::FRAGMENT_SHADER_INTERLOCK
             }
         }
     }

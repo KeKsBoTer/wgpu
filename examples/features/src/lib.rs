@@ -32,6 +32,7 @@ pub mod texture_arrays;
 pub mod timestamp_queries;
 pub mod uniform_values;
 pub mod water;
+pub mod fragment_shader_interlock;
 
 #[cfg(test)]
 wgpu_test::gpu_test_main!();

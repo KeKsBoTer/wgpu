@@ -474,5 +474,9 @@ pub fn create_validator(
         features.intersects(wgt::Features::EXPERIMENTAL_RAY_HIT_VERTEX_RETURN),
     );
 
+    caps.set(
+        Caps::FRAGMENT_BARRIER,
+        features.intersects(wgt::Features::EXPERIMENTAL_FRAGMENT_SHADER_INTERLOCK),
+    );
     naga::valid::Validator::new(flags, caps)
 }

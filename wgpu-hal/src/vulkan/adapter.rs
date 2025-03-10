@@ -125,6 +125,9 @@ pub struct PhysicalDeviceFeatures {
 
     /// Features proved by `VK_EXT_mesh_shader`
     mesh_shader: Option<vk::PhysicalDeviceMeshShaderFeaturesEXT<'static>>,
+
+    /// Fragment shader interlock
+    fragment_shader_interlock: Option<vk::PhysicalDeviceFragmentShaderInterlockFeaturesEXT<'static>>,
 }
 
 impl PhysicalDeviceFeatures {
@@ -190,6 +193,9 @@ impl PhysicalDeviceFeatures {
             info = info.push_next(feature);
         }
         if let Some(ref mut feature) = self.mesh_shader {
+            info = info.push_next(feature);
+        }
+        if let Some(ref mut feature) = self.fragment_shader_interlock {
             info = info.push_next(feature);
         }
         info
@@ -510,6 +516,11 @@ impl PhysicalDeviceFeatures {
             maintenance4: if enabled_extensions.contains(&khr::maintenance4::NAME) {
                 let needed = requested_features.contains(wgt::Features::EXPERIMENTAL_MESH_SHADER);
                 Some(vk::PhysicalDeviceMaintenance4FeaturesKHR::default().maintenance4(needed))
+            } else {
+                None
+            },
+            fragment_shader_interlock:  if enabled_extensions.contains(&ext::fragment_shader_interlock::NAME) {
+                Some(vk::PhysicalDeviceFragmentShaderInterlockFeaturesEXT::default().fragment_shader_pixel_interlock(true))
             } else {
                 None
             },
@@ -846,6 +857,12 @@ impl PhysicalDeviceFeatures {
                 mesh_shader.multiview_mesh_shader != 0,
             );
         }
+        if let Some(ref fragment_shader_interlock) = self.fragment_shader_interlock {
+            features.set(
+                F::EXPERIMENTAL_FRAGMENT_SHADER_INTERLOCK,
+                fragment_shader_interlock.fragment_shader_sample_interlock != 0,
+            );
+        }
         (features, dl_flags)
     }
 }
@@ -910,6 +927,8 @@ pub struct PhysicalDeviceProperties {
     /// Additional `vk::PhysicalDevice` properties from the
     /// `VK_EXT_mesh_shader` extension.
     _mesh_shader: Option<vk::PhysicalDeviceMeshShaderPropertiesEXT<'static>>,
+
+    _fragment_shader_interlock: Option<vk::PhysicalDeviceFragmentShaderInterlockFeaturesEXT<'static>>,
 
     /// The device API version.
     ///
@@ -1114,6 +1133,10 @@ impl PhysicalDeviceProperties {
 
         if requested_features.contains(wgt::Features::EXPERIMENTAL_MESH_SHADER) {
             extensions.push(ext::mesh_shader::NAME);
+        }
+
+        if requested_features.contains(wgt::Features::EXPERIMENTAL_FRAGMENT_SHADER_INTERLOCK) {
+            extensions.push(ext::fragment_shader_interlock::NAME);
         }
 
         extensions
@@ -1513,6 +1536,13 @@ impl super::InstanceShared {
                 let next = features
                     .mesh_shader
                     .insert(vk::PhysicalDeviceMeshShaderFeaturesEXT::default());
+                features2 = features2.push_next(next);
+            }
+
+            if capabilities.supports_extension(ext::fragment_shader_interlock::NAME) {
+                let next = features
+                    .fragment_shader_interlock
+                    .insert(vk::PhysicalDeviceFragmentShaderInterlockFeaturesEXT::default().fragment_shader_pixel_interlock(true));
                 features2 = features2.push_next(next);
             }
 
@@ -1972,6 +2002,22 @@ impl super::Adapter {
 
             if features.contains(wgt::Features::SHADER_FLOAT32_ATOMIC) {
                 capabilities.push(spv::Capability::AtomicFloat32AddEXT);
+            }
+
+            if features.contains(wgt::Features::EXPERIMENTAL_FRAGMENT_SHADER_INTERLOCK){
+                if let Some(fragment_shader_interlock) = self.phd_features.fragment_shader_interlock {
+                    if fragment_shader_interlock.fragment_shader_sample_interlock == vk::TRUE {
+                        capabilities.push(spv::Capability::FragmentShaderPixelInterlockEXT);
+
+                        log::error!("Fragment shader interlock: {:?}", fragment_shader_interlock);
+                    }
+                    if fragment_shader_interlock.fragment_shader_pixel_interlock == vk::TRUE {
+                        capabilities.push(spv::Capability::FragmentShaderSampleInterlockEXT);
+                    }
+                    if fragment_shader_interlock.fragment_shader_shading_rate_interlock == vk::TRUE {
+                        capabilities.push(spv::Capability::FragmentShaderShadingRateInterlockEXT);
+                    }
+                }
             }
 
             let mut flags = spv::WriterFlags::empty();
