@@ -87,15 +87,18 @@ struct Example {
     bind_group: wgpu::BindGroup,
     uniform_buf: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
+    display: wgpu::RenderPipeline,
     fractal_texture: wgpu::TextureView,
     frame_buffer: wgpu::Texture,
+    angle: f32,
 }
 
 impl Example {
-    fn generate_matrix(aspect_ratio: f32) -> glam::Mat4 {
+    fn generate_matrix(angle: f32, aspect_ratio: f32) -> glam::Mat4 {
         let projection = glam::Mat4::perspective_rh(consts::FRAC_PI_4, aspect_ratio, 1.0, 10.0);
         let view = glam::Mat4::look_at_rh(
-            glam::Vec3::new(1.5f32, -5.0, 3.0),
+            // glam::Vec3::new(1.5f32, -5.0, 3.0),
+            glam::Vec3::new(angle.cos() * 3.0, angle.sin() * 3.0, 3.0),
             glam::Vec3::ZERO,
             glam::Vec3::Z,
         );
@@ -132,7 +135,7 @@ fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::StorageTexture {
                     access: wgpu::StorageTextureAccess::ReadWrite,
-                    format: wgpu::TextureFormat::Rgba8Unorm,
+                    format: wgpu::TextureFormat::Rgba16Float,
                     view_dimension: wgpu::TextureViewDimension::D2,
                 },
                 count: None,
@@ -216,7 +219,7 @@ impl crate::framework::Example for Example {
         );
 
         // Create other resources
-        let mx_total = Self::generate_matrix(config.width as f32 / config.height as f32);
+        let mx_total = Self::generate_matrix(0., config.width as f32 / config.height as f32);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
@@ -234,8 +237,8 @@ impl crate::framework::Example for Example {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING,
+            format: wgpu::TextureFormat::Rgba16Float,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
 
@@ -305,6 +308,35 @@ impl crate::framework::Example for Example {
             cache: None,
         });
 
+
+        let shader_display = device.create_shader_module(wgpu::include_wgsl!("display.wgsl"));
+
+        let display = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: None,
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader_display,
+                entry_point: Some("vs_main"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader_display,
+                entry_point: Some("fs_main"),
+                compilation_options: Default::default(),
+                targets: &[Some(config.view_formats[0].into())],
+            }),
+            primitive: wgpu::PrimitiveState {
+                cull_mode: None,
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         // Done
         Example {
             vertex_buf,
@@ -312,14 +344,21 @@ impl crate::framework::Example for Example {
             index_count: index_data.len(),
             bind_group,
             uniform_buf,
+            display,
             pipeline,
             fractal_texture,
-            frame_buffer
+            frame_buffer,
+            angle: 0.0,
         }
     }
 
     fn update(&mut self, _event: winit::event::WindowEvent) {
-        //empty
+        self.angle += 0.01;
+        let mx_total = Self::generate_matrix(
+            self.angle,
+            self.frame_buffer.size().width as f32 / self.frame_buffer.size().height as f32,
+        );
+        let mx_ref: &[f32; 16] = mx_total.as_ref();
     }
 
     fn resize(
@@ -328,10 +367,7 @@ impl crate::framework::Example for Example {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        let mx_total = Self::generate_matrix(config.width as f32 / config.height as f32);
-        let mx_ref: &[f32; 16] = mx_total.as_ref();
-        queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(mx_ref));
-        let frame_buffer = device.create_texture(&wgpu::TextureDescriptor {
+        self.frame_buffer = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("frame_buffer"),
             size: wgpu::Extent3d {
                 width: config.width,
@@ -341,7 +377,7 @@ impl crate::framework::Example for Example {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
+            format: wgpu::TextureFormat::Rgba16Float,
             usage: wgpu::TextureUsages::STORAGE_BINDING,
             view_formats: &[],
         });
@@ -359,7 +395,7 @@ impl crate::framework::Example for Example {
                 wgpu::BindGroupEntry {
                     binding: 2,
                     resource: wgpu::BindingResource::TextureView(
-                        &frame_buffer.create_view(&wgpu::TextureViewDescriptor::default()),
+                        &self.frame_buffer.create_view(&wgpu::TextureViewDescriptor::default()),
                     ),
                 },
             ],
@@ -368,11 +404,29 @@ impl crate::framework::Example for Example {
     }
 
     fn render(&mut self, view: &wgpu::TextureView, device: &wgpu::Device, queue: &wgpu::Queue) {
+        let mx_total = Self::generate_matrix(
+            self.angle,
+            self.frame_buffer.size().width as f32 / self.frame_buffer.size().height as f32,
+        );
+        let mx_ref: &[f32; 16] = mx_total.as_ref();
+        queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(mx_ref));
+
+
+
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
-            // encoder.clear_texture(&self.frame_buffer, &wgpu::ImageSubresourceRange::default());
-            // queue.write_texture(texture, data, data_layout, size);
+            encoder.clear_texture(
+                &self.frame_buffer,
+                &wgpu::ImageSubresourceRange {
+                    aspect: wgpu::TextureAspect::All,
+                    base_mip_level: 0,
+                    mip_level_count: Some(1),
+                    base_array_layer: 0,
+                    array_layer_count: Some(1),
+                },
+            );
+
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -380,9 +434,9 @@ impl crate::framework::Example for Example {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,
@@ -401,7 +455,26 @@ impl crate::framework::Example for Example {
             rpass.insert_debug_marker("Draw!");
             rpass.draw_indexed(0..self.index_count as u32, 0, 0..1);
         }
+        // {
 
+        //     let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        //         label: None,
+        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        //             view,
+        //             resolve_target: None,
+        //             ops: wgpu::Operations {
+        //                 load: wgpu::LoadOp::Load,
+        //                 store: wgpu::StoreOp::Store,
+        //             },
+        //         })],
+        //         depth_stencil_attachment: None,
+        //         timestamp_writes: None,
+        //         occlusion_query_set: None,
+        //     });
+        //     rpass.set_pipeline(&self.display);
+        //     rpass.set_bind_group(0, &self.bind_group, &[]);
+        //     rpass.draw(0..4, 0..1);
+        // }
         queue.submit(Some(encoder.finish()));
     }
 }

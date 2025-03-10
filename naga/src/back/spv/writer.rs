@@ -16,10 +16,7 @@ use super::{
     PhysicalLayout, PipelineOptions, ResultMember, Writer, WriterFlags, BITS_PER_BYTE,
 };
 use crate::{
-    arena::{Handle, HandleVec, UniqueArena},
-    back::spv::{BindingInfo, WrappedFunction},
-    proc::{Alignment, TypeResolution},
-    valid::{FunctionInfo, ModuleInfo},
+    arena::{Handle, HandleVec, UniqueArena}, back::spv::{BindingInfo, WrappedFunction},  proc::{Alignment, TypeResolution}, valid::{FunctionInfo, ModuleInfo}
 };
 
 struct FunctionInterface<'a> {
@@ -1090,6 +1087,7 @@ impl Writer {
             crate::ShaderStage::Vertex => spirv::ExecutionModel::Vertex,
             crate::ShaderStage::Fragment => {
                 self.write_execution_mode(function_id, spirv::ExecutionMode::OriginUpperLeft)?;
+                self.write_execution_mode(function_id, spirv::ExecutionMode::PixelInterlockOrderedEXT)?;
                 if let Some(ref result) = entry_point.function.result {
                     if contains_builtin(
                         result.binding.as_ref(),
@@ -1617,11 +1615,18 @@ impl Writer {
         if flags.contains(crate::Barrier::FRAGMENT_BEGIN) {
             block.body.push(Instruction::new(spirv::Op::BeginInvocationInterlockEXT));
             self.use_extension("SPV_EXT_fragment_shader_interlock");
+            self.require_any("SPV_EXT_fragment_shader_interlock", &[
+                spirv::Capability::FragmentShaderPixelInterlockEXT
+            ]).unwrap();
             return;
         }
         if flags.contains(crate::Barrier::FRAGMENT_END) {
             block.body.push(Instruction::new(spirv::Op::EndInvocationInterlockEXT));
             self.use_extension("SPV_EXT_fragment_shader_interlock");
+
+            self.require_any("SPV_EXT_fragment_shader_interlock", &[
+                spirv::Capability::FragmentShaderPixelInterlockEXT
+            ]).unwrap();
             return;
         }
 
@@ -2043,6 +2048,7 @@ impl Writer {
         if let Some(ref res_binding) = global_variable.binding {
             self.decorate(id, Decoration::DescriptorSet, &[res_binding.group]);
             self.decorate(id, Decoration::Binding, &[res_binding.binding]);
+            self.decorate(id, Decoration::Coherent, &[res_binding.binding]); // TODO we cannot just add this to all bindings
 
             if let Some(&BindingInfo {
                 binding_array_size: Some(remapped_binding_array_size),

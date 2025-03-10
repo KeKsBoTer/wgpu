@@ -2008,8 +2008,6 @@ impl super::Adapter {
                 if let Some(fragment_shader_interlock) = self.phd_features.fragment_shader_interlock {
                     if fragment_shader_interlock.fragment_shader_sample_interlock == vk::TRUE {
                         capabilities.push(spv::Capability::FragmentShaderPixelInterlockEXT);
-
-                        log::error!("Fragment shader interlock: {:?}", fragment_shader_interlock);
                     }
                     if fragment_shader_interlock.fragment_shader_pixel_interlock == vk::TRUE {
                         capabilities.push(spv::Capability::FragmentShaderSampleInterlockEXT);
@@ -2042,6 +2040,7 @@ impl super::Adapter {
             if features.contains(wgt::Features::EXPERIMENTAL_RAY_HIT_VERTEX_RETURN) {
                 capabilities.push(spv::Capability::RayQueryPositionFetchKHR)
             }
+            log::error!("Capabilities: {:?}", capabilities);
             spv::Options {
                 lang_version: if features
                     .intersects(wgt::Features::SUBGROUP | wgt::Features::SUBGROUP_VERTEX)
